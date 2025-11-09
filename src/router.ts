@@ -10,7 +10,6 @@ import BookDetail from "@/pages/article/BookDetail.vue";
 import DictList from "@/pages/word/DictList.vue";
 import BookList from "@/pages/article/BookList.vue";
 import Setting from "@/pages/setting/Setting.vue";
-import Home from "@/pages/home/index.vue";
 import Login from "@/pages/user/login.vue";
 import User from "@/pages/user/index.vue";
 
@@ -19,7 +18,6 @@ export const routes: RouteRecordRaw[] = [
     path: '/',
     component: Layout,
     children: [
-      // {path: '/', component: Home},
       {path: '/', redirect: '/words'},
       {path: 'words', component: WordsPage},
       {path: 'word', redirect: '/words'},
