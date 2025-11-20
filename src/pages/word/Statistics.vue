@@ -1,15 +1,17 @@
 <script setup lang="ts">
-import {useBaseStore} from "@/stores/base.ts";
+import { useBaseStore } from "@/stores/base.ts";
 import BaseButton from "@/components/BaseButton.vue";
-import {PracticeData, ShortcutKey, Statistics, TaskWords, WordPracticeMode} from "@/types/types.ts";
-import {emitter, EventKey, useEvents} from "@/utils/eventBus.ts";
-import {useSettingStore} from "@/stores/setting.ts";
-import {usePracticeStore} from "@/stores/practice.ts";
+import { ShortcutKey, Statistics, TaskWords } from "@/types/types.ts";
+import { emitter, EventKey, useEvents } from "@/utils/eventBus.ts";
+import { useSettingStore } from "@/stores/setting.ts";
+import { usePracticeStore } from "@/stores/practice.ts";
 import dayjs from "dayjs";
 import isBetween from "dayjs/plugin/isBetween";
-import {defineAsyncComponent, inject, watch} from "vue";
+import { defineAsyncComponent, inject, watch } from "vue";
 import isoWeek from 'dayjs/plugin/isoWeek'
-import {msToHourMinute, msToMinute} from "@/utils";
+import { msToHourMinute } from "@/utils";
+import Progress from "@/components/base/Progress.vue";
+import ChannelIcons from "@/components/ChannelIcons.vue";
 
 dayjs.extend(isoWeek)
 dayjs.extend(isBetween);
@@ -45,6 +47,7 @@ function calcWeekList() {
       weekList[idx] = true;
     }
   });
+  weekList[2] = true;
   list = weekList;
 }
 
@@ -125,212 +128,148 @@ const formattedStudyTime = $computed(() => {
   return time.replace('小时', 'h ').replace('分钟', 'm')
 })
 
-// 获取星期标签
-function getDayLabel(index: number) {
-  const days = ['一', '二', '三', '四', '五', '六', '日']
-  return days[index]
-}
+calcWeekList(); // 新增：计算本周学习记录
 
 </script>
 
 <template>
   <Dialog
-    :close-on-click-bg="false"
-    :header="false"
-    :keyboard="false"
-    :show-close="false"
-    class="statistics-modal">
-    <div class="p-8 bg-white rounded-2xl max-w-2xl mx-auto">
-      <!-- Header Section -->
-      <div class="text-center mb-8 relative">
-        <div
-          class="text-3xl font-bold mb-2 bg-gradient-to-r from-purple-500 to-purple-700 bg-clip-text text-transparent">
-          <template v-if="practiceTaskWords.shuffle.length">
-            🎯 随机复习完成
-          </template>
-          <template v-else>
-            🎉 今日任务完成
-          </template>
-        </div>
-        <p class="text-gray-600 font-medium text-lg">{{ encouragementText }}</p>
-      </div>
-
-      <!-- Main Stats Grid -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-2">
-        <!-- Study Time -->
-        <div class="item">
-          <IconFluentClock20Regular class="text-purple-500 mx-auto mb-2"/>
-          <div class="text-sm text-gray-600 mb-1 font-medium">学习时长</div>
-          <div class="text-xl font-bold text-gray-900">{{ formattedStudyTime }}</div>
+      :close-on-click-bg="false"
+      :header="false"
+      :keyboard="false"
+      :show-close="false"
+      class="statistics-modal">
+    <div class="p-8 pr-3 bg-white rounded-2xl gap-3 flex">
+      <div class="space-y-6">
+        <!-- Header Section -->
+        <div class="text-center relative">
+          <div
+              class="text-3xl font-bold mb-2 bg-gradient-to-r from-purple-500 to-purple-700 bg-clip-text text-transparent">
+            <template v-if="practiceTaskWords.shuffle.length">
+              🎯 随机复习完成
+            </template>
+            <template v-else>
+              🎉 今日任务完成
+            </template>
+          </div>
+          <p class="font-medium text-lg">{{ encouragementText }}</p>
         </div>
 
-        <!-- Accuracy Rate -->
-        <div class="item">
-          <IconFluentTarget20Regular class="text-purple-500 mx-auto mb-2"/>
-          <div class="text-sm text-gray-600 mb-1 font-medium">正确率</div>
-          <div class="text-xl font-bold text-gray-900 mb-2">{{ accuracyRate }}%</div>
-          <div class="w-full bg-gray-200 rounded-full h-1">
-            <div
-              class="h-1 rounded-full transition-all duration-300"
-              :class="{ 
-                'bg-green-500': accuracyRate >= 95, 
-                'bg-yellow-500': accuracyRate >= 85 && accuracyRate < 95, 
-                'bg-red-500': accuracyRate < 85 
+        <!-- Main Stats Grid -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <!-- Study Time -->
+          <div class="item">
+            <IconFluentClock20Regular class="text-purple-500"/>
+            <div class="text-sm text-gray-600 mb-1 font-medium">学习时长</div>
+            <div class="text-xl font-bold text-gray-900">{{ formattedStudyTime }}</div>
+          </div>
+
+          <!-- Accuracy Rate -->
+          <div class="item">
+            <IconFluentTarget20Regular class="text-purple-500"/>
+            <div class="text-sm text-gray-600 mb-1 font-medium">正确率</div>
+            <div class="text-xl font-bold text-gray-900 mb-2">{{ accuracyRate }}%</div>
+            <div class="w-full bg-gray-200 rounded-full h-1" v-if="false">
+              <div
+                  class="h-1 rounded-full transition-all duration-300"
+                  :class="{
+                'bg-green-500': accuracyRate >= 95,
+                'bg-yellow-500': accuracyRate >= 85 && accuracyRate < 95,
+                'bg-red-500': accuracyRate < 85
               }"
-              :style="{ width: accuracyRate + '%' }">
-            </div>
-          </div>
-        </div>
-
-        <!-- Total Words -->
-        <div class="item">
-          <IconFluentBook20Regular class="text-purple-500 mx-auto mb-2"/>
-          <div class="text-sm text-gray-600 mb-1 font-medium">总词数</div>
-          <div class="text-xl font-bold text-gray-900">{{ statStore.total }}</div>
-        </div>
-
-        <!-- New Words -->
-        <div class="item">
-          <IconFluentSparkle20Regular class="text-purple-500 mx-auto mb-2"/>
-          <div class="text-sm text-gray-600 mb-1 font-medium">新词</div>
-          <div class="text-xl font-bold text-gray-900">{{ statStore.newWordNumber }}</div>
-        </div>
-      </div>
-
-      <!-- Word Breakdown -->
-      <div class="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-2 mb-2">
-        <div class="text-center mb-4 title">学习详情</div>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div class="flex items-center gap-3 p-3 bg-white rounded-lg shadow-sm">
-            <div class="w-6 h-6 text-green-500">
-              <IconFluentCheckmark20Regular/>
-            </div>
-            <div>
-              <div class="text-sm text-gray-600">正确</div>
-              <div class="text-lg font-bold text-gray-900">{{ statStore.total - statStore.wrong }}</div>
-            </div>
-          </div>
-          <div class="flex items-center gap-3 p-3 bg-white rounded-lg shadow-sm">
-            <div class="w-6 h-6 text-red-500">
-              <IconFluentDismiss20Regular/>
-            </div>
-            <div>
-              <div class="text-sm text-gray-600">错误</div>
-              <div class="text-lg font-bold text-gray-900">{{ statStore.wrong }}</div>
-            </div>
-          </div>
-          <div class="flex items-center gap-3 p-3 bg-white rounded-lg shadow-sm">
-            <div class="w-6 h-6 text-yellow-500">
-              <IconFluentArrowRepeatAll20Regular/>
-            </div>
-            <div>
-              <div class="text-sm text-gray-600">复习</div>
-              <div class="text-lg font-bold text-gray-900">{{
-                  statStore.reviewWordNumber + statStore.writeWordNumber
-                }}
+                  :style="{ width: accuracyRate + '%' }">
               </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      <!-- Weekly Progress -->
-      <div class="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-2 mb-2">
-        <div class="text-center mb-4">
-          <div class="text-xl font-semibold text-gray-900 mb-1">本周学习记录</div>
-          <div class="text-sm text-gray-600">坚持就是胜利</div>
-        </div>
-        <div class="flex justify-between gap-2">
-          <div
-            v-for="(item, i) in list"
-            :key="i"
-            class="flex-1 text-center p-2 rounded-lg transition-all duration-300 cursor-pointer"
-            :class="item ? 'bg-green-500 text-white shadow-lg' : 'bg-white text-gray-700 hover:shadow-md'"
-          >
-            <div class="font-semibold mb-1">{{ i + 1 }}</div>
-            <div class="w-2 h-2 rounded-full mx-auto mb-1"
-                 :class="item ? 'bg-white bg-opacity-30' : 'bg-gray-300'"></div>
-            <div class="text-xs font-medium">{{ getDayLabel(i) }}</div>
+          <!-- New Words -->
+          <div class="item">
+            <IconFluentSparkle20Regular class="text-purple-500"/>
+            <div class="text-sm text-gray-600 mb-1 font-medium">新词</div>
+            <div class="text-xl font-bold text-gray-900">{{ statStore.newWordNumber }}</div>
+          </div>
+
+          <!-- New Words -->
+          <div class="item">
+            <IconFluentBook20Regular class="text-purple-500"/>
+            <div class="text-sm text-gray-600 mb-1 font-medium">复习</div>
+            <div class="text-xl font-bold text-gray-900">{{ statStore.newWordNumber }}</div>
           </div>
         </div>
-      </div>
 
-      <!-- Progress Overview -->
-      <div class="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6 mb-8">
-        <div class="flex justify-between items-center mb-3">
-          <div class="text-xl font-semibold text-gray-900">学习进度</div>
-          <div class="text-2xl font-bold text-purple-600">{{ studyProgress }}%</div>
-        </div>
-        <div class="w-full bg-gray-200 rounded-full h-3 mb-3">
-          <div
-            class="h-3 rounded-full bg-gradient-to-r from-purple-500 to-purple-700 transition-all duration-500"
-            :style="{ width: studyProgress + '%' }">
+        <!-- Weekly Progress -->
+        <div class="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-2">
+          <div class="text-center mb-4">
+            <div class="text-xl font-semibold text-gray-900 mb-1">本周学习记录</div>
+          </div>
+          <div class="flex justify-between gap-4">
+            <div
+                v-for="(item, i) in list"
+                :key="i"
+                class="flex-1 text-center px-2 py-3 rounded-lg"
+                :class="item ? 'bg-green-500 text-white shadow-lg' : 'bg-white text-gray-700'"
+            >
+              <div class="font-semibold mb-1">{{ i + 1 }}</div>
+              <div class="w-2 h-2 rounded-full mx-auto mb-1"
+                   :class="item ? 'bg-white bg-opacity-30' : 'bg-gray-300'"></div>
+            </div>
           </div>
         </div>
-        <div class="flex justify-between text-sm text-gray-600 font-medium">
-          <span>已学习: {{ store.sdict.lastLearnIndex }}</span>
-          <span>总词数: {{ store.sdict.length }}</span>
+
+        <!-- Progress Overview -->
+        <div class="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl py-2 px-6">
+          <div class="flex justify-between items-center mb-3">
+            <div class="text-xl font-semibold text-gray-900">学习进度</div>
+            <div class="text-2xl font-bold text-purple-600">{{ studyProgress }}%</div>
+          </div>
+          <Progress :percentage="studyProgress" size="large" :show-text="false"/>
+          <div class="flex justify-between text-sm text-gray-600 font-medium mt-4">
+            <span>已学习: {{ store.sdict.lastLearnIndex }}</span>
+            <span>总词数: {{ store.sdict.length }}</span>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <BaseButton
+              :keyboard="settingStore.shortcutKeyMap[ShortcutKey.RepeatChapter]"
+              @click="options(EventKey.repeatStudy)">
+            <div class="center gap-2">
+              <IconFluentArrowClockwise20Regular/>
+              重学一遍
+            </div>
+          </BaseButton>
+          <BaseButton
+              :keyboard="settingStore.shortcutKeyMap[ShortcutKey.NextChapter]"
+              @click="options(EventKey.continueStudy)"
+              class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-medium transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
+              :class="dictIsEnd ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white' : 'bg-gradient-to-r from-green-500 to-green-600 text-white'">
+            <IconFluentPlay20Regular/>
+            {{ dictIsEnd ? '从头开始练习' : '再来一组' }}
+          </BaseButton>
+          <BaseButton
+              :keyboard="settingStore.shortcutKeyMap[ShortcutKey.NextRandomWrite]"
+              @click="options(EventKey.randomWrite)">
+            <div class="center gap-2">
+              <IconFluentPen20Regular/>
+              继续默写
+            </div>
+          </BaseButton>
+          <BaseButton @click="$router.back">
+            <div class="center gap-2">
+              <IconFluentHome20Regular/>
+              返回主页
+            </div>
+          </BaseButton>
         </div>
       </div>
-
-      <!-- Action Buttons -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <BaseButton
-          :keyboard="settingStore.shortcutKeyMap[ShortcutKey.RepeatChapter]"
-          @click="options(EventKey.repeatStudy)"
-          class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-medium transition-all duration-300 hover:-translate-y-1 hover:shadow-lg bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
-          <IconFluentArrowClockwise20Regular class="w-5 h-5"/>
-          重学一遍
-        </BaseButton>
-        <BaseButton
-          :keyboard="settingStore.shortcutKeyMap[ShortcutKey.NextChapter]"
-          @click="options(EventKey.continueStudy)"
-          class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-medium transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
-          :class="dictIsEnd ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white' : 'bg-gradient-to-r from-green-500 to-green-600 text-white'">
-          <IconFluentPlay20Regular class="w-5 h-5"/>
-          {{ dictIsEnd ? '从头开始练习' : '再来一组' }}
-        </BaseButton>
-        <BaseButton
-          :keyboard="settingStore.shortcutKeyMap[ShortcutKey.NextRandomWrite]"
-          @click="options(EventKey.randomWrite)"
-          class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-medium transition-all duration-300 hover:-translate-y-1 hover:shadow-lg bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-          <IconFluentPen20Regular class="w-5 h-5"/>
-          继续默写
-        </BaseButton>
-        <BaseButton @click="$router.back"
-                    class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-medium transition-all duration-300 hover:-translate-y-1 hover:shadow-lg bg-gradient-to-r from-gray-500 to-gray-600 text-white">
-          <IconFluentHome20Regular class="w-5 h-5"/>
-          返回主页
-        </BaseButton>
-      </div>
+      <ChannelIcons/>
     </div>
   </Dialog>
 </template>
 
 <style scoped>
-/* Custom animation for pulse effect */
-@keyframes pulse {
-  0%, 100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.05);
-  }
-}
-
-.animate-pulse {
-  animation: pulse 2s infinite;
-}
-
-/* Custom gradient text utility */
-.text-gradient {
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.item{
-  @apply bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 text-center hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border border-gray-100;
+.item {
+  @apply bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-2 text-center border border-gray-100;
 }
 </style>
