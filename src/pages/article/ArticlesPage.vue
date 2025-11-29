@@ -1,27 +1,35 @@
 <script setup lang="ts">
-import {useBaseStore} from "@/stores/base.ts";
-import {useRouter} from "vue-router";
+import { useBaseStore } from "@/stores/base.ts";
+import { useRouter } from "vue-router";
 import BasePage from "@/components/BasePage.vue";
-import {_getDictDataByUrl, _nextTick, isMobile, msToHourMinute, resourceWrap, total, useNav} from "@/utils";
-import {DictResource, DictType} from "@/types/types.ts";
-import {useRuntimeStore} from "@/stores/runtime.ts";
+import {
+  _getDictDataByUrl,
+  _nextTick,
+  isMobile,
+  loadJsLib,
+  msToHourMinute,
+  resourceWrap,
+  total,
+  useNav
+} from "@/utils";
+import { DictResource, DictType } from "@/types/types.ts";
+import { useRuntimeStore } from "@/stores/runtime.ts";
 import BaseIcon from "@/components/BaseIcon.vue";
 import Book from "@/components/Book.vue";
 import Progress from '@/components/base/Progress.vue';
 import Toast from '@/components/base/toast/Toast.ts'
 import BaseButton from "@/components/BaseButton.vue";
 import PopConfirm from "@/components/PopConfirm.vue";
-import {watch} from "vue";
-import {getDefaultDict} from "@/types/func.ts";
+import { watch } from "vue";
+import { getDefaultDict } from "@/types/func.ts";
 import DeleteIcon from "@/components/icon/DeleteIcon.vue";
 import dayjs from "dayjs";
 import isBetween from "dayjs/plugin/isBetween";
 import isoWeek from 'dayjs/plugin/isoWeek'
-import {useFetch} from "@vueuse/core";
-import {AppEnv, DICT_LIST, Host, PracticeSaveArticleKey, TourConfig} from "@/config/env.ts";
-import {myDictList} from "@/apis";
-import Shepherd from "shepherd.js";
-import {useSettingStore} from "@/stores/setting.ts";
+import { useFetch } from "@vueuse/core";
+import { AppEnv, DICT_LIST, Host, LIB_JS_URL, PracticeSaveArticleKey, TourConfig } from "@/config/env.ts";
+import { myDictList } from "@/apis";
+import { useSettingStore } from "@/stores/setting.ts";
 
 dayjs.extend(isoWeek)
 dayjs.extend(isBetween);
@@ -73,7 +81,8 @@ async function init() {
 watch(() => store?.sbook?.id, (n) => {
   console.log('n', n)
   if (!n) {
-    _nextTick(() => {
+    _nextTick(async () => {
+      const Shepherd = await loadJsLib('Shepherd', LIB_JS_URL.SHEPHERD);
       const tour = new Shepherd.Tour(TourConfig);
       tour.on('cancel', () => {
         localStorage.setItem('tour-guide', '1');

@@ -2,10 +2,19 @@
 import { useBaseStore } from "@/stores/base.ts";
 import { useRouter } from "vue-router";
 import BaseIcon from "@/components/BaseIcon.vue";
-import {_getAccomplishDate, _getDictDataByUrl, _nextTick, isMobile, resourceWrap, shuffle, useNav} from "@/utils";
+import {
+  _getAccomplishDate,
+  _getDictDataByUrl,
+  _nextTick,
+  isMobile,
+  loadJsLib,
+  resourceWrap,
+  shuffle,
+  useNav
+} from "@/utils";
 import BasePage from "@/components/BasePage.vue";
 import { DictResource, WordPracticeMode } from "@/types/types.ts";
-import { onMounted, watch } from "vue";
+import { watch } from "vue";
 import { getCurrentStudyWord } from "@/hooks/dict.ts";
 import { useRuntimeStore } from "@/stores/runtime.ts";
 import Book from "@/components/Book.vue";
@@ -19,11 +28,10 @@ import PracticeSettingDialog from "@/pages/word/components/PracticeSettingDialog
 import ChangeLastPracticeIndexDialog from "@/pages/word/components/ChangeLastPracticeIndexDialog.vue";
 import { useSettingStore } from "@/stores/setting.ts";
 import { useFetch } from "@vueuse/core";
-import { AppEnv, DICT_LIST, Host, PracticeSaveWordKey, TourConfig } from "@/config/env.ts";
+import { AppEnv, DICT_LIST, Host, LIB_JS_URL, PracticeSaveWordKey, TourConfig } from "@/config/env.ts";
 import { myDictList } from "@/apis";
 import PracticeWordListDialog from "@/pages/word/components/PracticeWordListDialog.vue";
 import ShufflePracticeSettingDialog from "@/pages/word/components/ShufflePracticeSettingDialog.vue";
-import Shepherd from "shepherd.js";
 import SettingDialog from "@/pages/word/components/SettingDialog.vue";
 
 
@@ -45,7 +53,8 @@ let currentStudy = $ref({
 watch(() => store.load, n => {
   if (n) {
     init()
-    _nextTick(() => {
+    _nextTick(async () => {
+      const Shepherd = await loadJsLib('Shepherd', LIB_JS_URL.SHEPHERD);
       const tour = new Shepherd.Tour(TourConfig);
       tour.on('cancel', () => {
         localStorage.setItem('tour-guide', '1');
@@ -237,7 +246,7 @@ let isNewHost = $ref(window.location.host === Host)
       2study.top 域名将在不久后停止使用
     </div>
 
-    <SettingDialog/>
+<!--    <SettingDialog/>-->
 
     <div class="card flex flex-col md:flex-row gap-8">
       <div class="flex-1 w-full flex flex-col justify-between">
