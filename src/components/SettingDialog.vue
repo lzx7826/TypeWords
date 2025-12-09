@@ -169,6 +169,7 @@ const simpleWords = $computed({
               <Switch v-model="settingStore.inputWrongClear"/>
             </SettingItem>
 
+
             <SettingItem title="单词循环设置" class="gap-0!">
               <RadioGroup v-model="settingStore.repeatCount">
                 <Radio :value="1" size="default">1</Radio>
@@ -187,6 +188,11 @@ const simpleWords = $computed({
               </div>
             </SettingItem>
 
+            <SettingItem title="复习比"
+                         desc="复习词与新词的比例，修改后下次学习生效"
+            >
+              <InputNumber :min="0" :max="10" v-model="settingStore.wordReviewRatio"/>
+            </SettingItem>
 
             <!--          发音-->
             <!--          发音-->
